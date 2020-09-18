@@ -1,11 +1,3 @@
-/// Written by palachzzz 01.03.2020
-#include <Snooze.h>
-
-SnoozeDigital digital;
-SnoozeTimer timer;
-SnoozeUSBSerial usbSerial;
-SnoozeBlock config(timer, usbSerial);
-
 #define IN_PACKET_SIZE 64
 #define OUT_PACKET_SIZE 64
 
@@ -13,7 +5,6 @@ elapsedMillis timerXiao;
 elapsedMillis timerNine;
 int stateXiao = 0;
 int sleeping = 0;
-
 
 //##########################################
 byte buf_num_nine = 0;
@@ -83,9 +74,7 @@ char mem_bms[2][256] = {
 }
 };
 void setup() {
-
   Serial.begin(115200);
- 
   Serial1.begin(115200);
   Serial2.begin(9600);
   
@@ -102,7 +91,8 @@ void setup() {
   setRemCap(32500, 0);
   setRemPerc(21, 0);
   setHealth(97, 0);
-
+  setMfgDate((20<<9)|(9<<5)|18,0);// 20 -year, 9 - month, 18 -day
+  
   setVoltage(3010, 1);
   setCurrent(0, 1);
   setTemp1(20, 1);
@@ -114,9 +104,8 @@ void setup() {
   setRemCap(32500, 1);
   setRemPerc(21, 1);
   setHealth(97, 1);
-  timer.setTimer(1000);
-  
-  delay(1000);
+  setMfgDate((20<<9)|(9<<5)|18,1);// 20 -year, 9 - month, 18 -day
+  delay(100);
 
   digitalWrite(13, LOW);
 }
@@ -157,7 +146,6 @@ boolean verifyNine() {
   boolean check = false;
   if (pcrc_nine == computeCheckNine(buf_num_r_nine, len_nine)) {
     check = true;
-//  Serial.println(cx, HEX);
     //Serial.println("crc ok");
   } else {
     //Serial.println("crc fail");
@@ -238,6 +226,7 @@ boolean parseinNine(){
     }
   } else if (daddr == 0x16) {
       if (!((cmd == 0x02 && maddr == 0x05 && mlen == 0x02) ||(cmd == 0x01 && maddr == 0x01 && mlen == 0x02) || (cmd == 0x02 && maddr == 0x01) || (cmd == 0x05 && maddr == 0x01 && mlen == 0x02))) {
+      //if (!((cmd == 0x02) && (maddr == 0x05) && (mlen == 0x02)) ) {
         
       
       Serial.print("Received msg to 16: ");
@@ -260,6 +249,9 @@ boolean parseinNine(){
 }
 
 boolean parseinXiao(){
+//  setChrgFullCycles(56); << unknown
+//  setChrgCount(134); << unknown
+//    setHealth(97); << unknown
 
 
   if (packet_xiao[buf_num_r_xiao][1] == 0x03) {    
@@ -285,7 +277,9 @@ boolean parseinXiao(){
     setActCap(full_cap_xiao/2, 1);
     int cycles_xiao = ((packet_xiao[buf_num_r_xiao][12] << 8) | (packet_xiao[buf_num_r_xiao][13])); 
     setChrgFullCycles(cycles_xiao,0);
+    setChrgCount(cycles_xiao,0);
     setChrgFullCycles(cycles_xiao,1);
+    setChrgCount(cycles_xiao,1);
     int date_xiao = (packet_xiao[buf_num_r_xiao][14] << 8) | (packet_xiao[buf_num_r_xiao][15]);
     int year_xiao = date_xiao >> 9;
     int mounth_xiao = (date_xiao >> 5) & 0x0F;
@@ -305,7 +299,8 @@ boolean parseinXiao(){
     char dschrg_fet_xiao = (packet_xiao[buf_num_r_xiao][24] >> 1) & 0x01;
     int cell_num_xiao = (packet_xiao[buf_num_r_xiao][25]);
     int temp_num_xiao = (packet_xiao[buf_num_r_xiao][26]);
-
+    setMinCellVoltage(volt_xiao/cell_num_xiao, 0);
+    setMinCellVoltage(volt_xiao/cell_num_xiao, 1);
     Serial.print("Received life data: V=");
     Serial.print(volt_xiao);
     Serial.print(" I="); 
@@ -393,6 +388,7 @@ boolean parseinXiao(){
     if (percent_xiao == 0 && cycles_xiao == 0 && remain_cap_xiao == 0) {
       Serial.print("Init mode, recalc percents... ");
       int fake_percents = (100*(volt_xiao - (cell_num_xiao*300)))/(cell_num_xiao*420-cell_num_xiao*300);
+      //int fake_percents = (cell_num_xiao*420-cell_num_xiao*300);
       Serial.println(fake_percents);
       setRemPerc(fake_percents,0);
       setRemPerc(fake_percents,1);
@@ -447,6 +443,9 @@ void setChrgFullCycles(int num, int bms){
 void setChrgCount(int num, int bms){
   writeIntToMem(num, 0x1C*2, bms);
 }
+void setMinCellVoltage(int num, int bms){
+  writeIntToMem(num, 0x3C*2, bms);
+}
 void setMfgDate(int num, int bms){
   writeIntToMem(num, 0x20*2, bms);
 }
@@ -470,9 +469,11 @@ void setTemp2(int num, int bms){
 }
 void setBalancing1(int num, int bms){
   mem_bms[bms][0x36*2] = num & 0xFF;
+  //mem_bms[0][0x36*2] = 0x55;
 }
 void setBalancing2(int num, int bms){
   mem_bms[bms][0x36*2+1] = num & 0xFF;
+  //mem_bms[0][0x36*2+1] = 0xaa;
 }
 void setHealth(int num, int bms){
   writeIntToMem(num, 0x3B*2, bms);
@@ -498,11 +499,7 @@ boolean genpacket(byte buf, byte mlen, byte saddr, byte daddr, byte cmd, byte ma
   packet_nine[buf][mlen+7] = crc_o & 0xFF;
   packet_nine[buf][mlen+8] = (crc_o >> 8) & 0xFF;
 
-  
-
-
   Serial1.write(packet_nine[buf], mlen + 9);
-
   for (int rr = 0; rr < mlen+9; rr++){
     //Serial.print(packet[buf][rr], HEX);
     //Serial.print(' ');
@@ -546,14 +543,14 @@ boolean collectorNine(char c) {
 }
 
 boolean collectorXiao(char c) {
-  Serial.print(c, HEX);
+  //Serial.print(c, HEX);
   if (x_state == 3) {
     //Serial.print(c, HEX);
     //Serial.print(' ');
     packet_xiao[buf_num_xiao][i_x] = c;
     if (i_x >= len_xiao +6) {
       x_state = 0;
-      pcrc_xiao = (packet_xiao[buf_num_xiao][i_x-2] << 8) | (packet_xiao[buf_num_xiao][i_x-1]); 
+      pcrc_xiao = (packet_xiao[buf_num_xiao][i_x-2] << 8) | (packet_xiao[buf_num_xiao][i_x-1]); /// to check<<<<<<<<<<<<<<<<<<<
       
       i_x = 0;
       //Serial.println("]]]]]");
@@ -628,6 +625,7 @@ void loop() {
   }
   // Check XiaoXiang Response
   while (Serial2.available()) {
+    //Serial.println("Get Xiao");
     if (collectorXiao(Serial2.read())) {
       buf_num_r_xiao = buf_num_xiao;
       buf_num_xiao += 1;
@@ -639,6 +637,7 @@ void loop() {
   }
   // Check controller's request
   while (Serial1.available()) {
+    //Serial.println("Get Nine");
     sleeping = 0;
     timerNine =0;
     if (collectorNine(Serial1.read())) {
@@ -652,12 +651,12 @@ void loop() {
   }  
   // Sleep if ninebot stoped communication for 0.5s
   if (timerNine >= 500) {
-    sleeping = 1;
+    //sleeping = 1;
     timerNine = 0;
     timerXiao = 0;
     Serial.println("Snooze");
-    delay(20);
-    Snooze.deepSleep(config); // sleep if no requests from ninebot
+    //delay(20);
+    //Snooze.deepSleep(config);
     
   }
 }
