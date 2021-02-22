@@ -400,7 +400,9 @@ boolean parseinXiao(){
   } else if (packet_xiao[buf_num_r_xiao][1] == 0x04) {
     //Serial.println("Cells: ");
     int cells_xiao[len_xiao/2];
-    for (int cells_i = 0; cells_i < (len_xiao/2); cells_i++) {
+    int cell_num = len_xiao/2;
+    if (cell_num > 16) cell_num = 16;
+    for (int cells_i = 0; cells_i < cell_num; cells_i++) {
       cells_xiao[cells_i] = (packet_xiao[buf_num_r_xiao][(cells_i*2)+4]<<8) | packet_xiao[buf_num_r_xiao][(cells_i*2)+5];
       setCellVoltage(cells_xiao[cells_i],cells_i, 0);
       setCellVoltage(cells_xiao[cells_i],cells_i, 1);
