@@ -299,8 +299,8 @@ boolean parseinXiao(){
     char dschrg_fet_xiao = (packet_xiao[buf_num_r_xiao][24] >> 1) & 0x01;
     int cell_num_xiao = (packet_xiao[buf_num_r_xiao][25]);
     int temp_num_xiao = (packet_xiao[buf_num_r_xiao][26]);
-    setMinCellVoltage(volt_xiao/cell_num_xiao, 0);
-    setMinCellVoltage(volt_xiao/cell_num_xiao, 1);
+    setMinCellVoltage(volt_xiao*10/cell_num_xiao, 0);
+    setMinCellVoltage(volt_xiao*10/cell_num_xiao, 1);
     Serial.print("Received life data: V=");
     Serial.print(volt_xiao);
     Serial.print(" I="); 
