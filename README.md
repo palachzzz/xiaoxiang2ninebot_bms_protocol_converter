@@ -9,6 +9,7 @@ WARNING: Teensy LC does't work with this project (not enough RAM)
 Tested boards:
 - teensy 3.6
 - teensy 3.2
+ 
 I can't guarantee that it will work properly on others Teensy 3, and Teensy 4 (need to test)
 
 It is recommended to power teensy from LED connector near battery (+5V). In this case it will not drain power when wheel is in shutdown state, and it is easy to reboot it if nessesary (by turn off/turn on the Z10).
