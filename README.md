@@ -12,7 +12,7 @@ Tested boards:
  
 I can't guarantee that it will work properly on others Teensy 3, and Teensy 4 (need to test)
 
-It is recommended to power teensy from LED connector near battery (+5V). In this case it will not drain power when wheel is in shutdown state, and it is easy to reboot it if nessesary (by turn off/turn on the Z10).
+It is recommended to power teensy from LED connector near battery (+5V). In this case it will not drain power when wheel is in shutdown state, and it is easy to reboot it if nessesary (by turn off/turn on Z10).
 
 When connected and everything work properly - you should see correct battery indicator state, if not - don't try to ride - it is high probability to burn LM5576 and TDM31035. 
 
