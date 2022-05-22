@@ -172,9 +172,8 @@ boolean parseinNine(){
   char cmd = packet_nine[buf_num_r_nine][5];
   char maddr = packet_nine[buf_num_r_nine][6];
   char mlen = packet_nine[buf_num_r_nine][7];
-/*  Serial.print("Received command: len ");
-  Serial.print(len, HEX);
-  
+  /*
+  Serial.print("Received command: len ");
   Serial.print(" saddr: ");
   Serial.print(saddr, HEX);
   Serial.print(" daddr: ");
@@ -184,8 +183,11 @@ boolean parseinNine(){
   Serial.print(" maddr: ");
   Serial.print(maddr, HEX);
   Serial.print(" with len: ");
-  Serial.println(mlen, HEX); */
+  Serial.println(mlen, HEX);
+  */
   if ((daddr == 0x11) || (daddr == 0x12)) {
+    Serial.println("Get Nine");
+    digitalWrite(13, HIGH);
     if ((cmd == 0x55) || (cmd == 0x01)) {
       if (cmd == 0x01) {
        cmd = 0x04;
@@ -401,7 +403,9 @@ boolean parseinXiao(){
     //Serial.println("Cells: ");
     int cells_xiao[len_xiao/2];
     int cell_num = len_xiao/2;
-    if (cell_num > 16) cell_num = 16;
+    if (cell_num > 20) cell_num = 20;
+    setCellNum(cell_num, 0);
+    setCellNum(cell_num, 1);
     for (int cells_i = 0; cells_i < cell_num; cells_i++) {
       cells_xiao[cells_i] = (packet_xiao[buf_num_r_xiao][(cells_i*2)+4]<<8) | packet_xiao[buf_num_r_xiao][(cells_i*2)+5];
       setCellVoltage(cells_xiao[cells_i],cells_i, 0);
@@ -470,18 +474,23 @@ void setTemp2(int num, int bms){
   mem_bms[bms][0x35*2+1] = (num+20) & 0xFF;
 }
 void setBalancing1(int num, int bms){
-  mem_bms[bms][0x36*2] = num & 0xFF;
+  mem_bms[bms][0x36*2+1] = num & 0xFF;
   //mem_bms[0][0x36*2] = 0x55;
 }
 void setBalancing2(int num, int bms){
-  mem_bms[bms][0x36*2+1] = num & 0xFF;
+  mem_bms[bms][0x36*2] = num & 0xFF;
   //mem_bms[0][0x36*2+1] = 0xaa;
 }
 void setHealth(int num, int bms){
   writeIntToMem(num, 0x3B*2, bms);
 }
+
+void setCellNum(int num, int bms){
+  writeIntToMem(num, 0x3F*2, bms);
+}
+
 void setCellVoltage(int num, int cell, int bms){
-  if (cell<16) {
+  if (cell<20) {
     writeIntToMem(num, (0x40+cell)*2, bms);
   }
 }
@@ -502,11 +511,13 @@ boolean genpacket(byte buf, byte mlen, byte saddr, byte daddr, byte cmd, byte ma
   packet_nine[buf][mlen+8] = (crc_o >> 8) & 0xFF;
 
   Serial1.write(packet_nine[buf], mlen + 9);
+  /*
   for (int rr = 0; rr < mlen+9; rr++){
-    //Serial.print(packet[buf][rr], HEX);
-    //Serial.print(' ');
+    Serial.print(packet_nine[buf][rr], HEX);
+    
   }
-
+  Serial.println('-');
+*/
 }
 
 
@@ -627,19 +638,19 @@ void loop() {
   }
   // Check XiaoXiang Response
   while (Serial2.available()) {
-    //Serial.println("Get Xiao");
     if (collectorXiao(Serial2.read())) {
       buf_num_r_xiao = buf_num_xiao;
       buf_num_xiao += 1;
       buf_num_xiao %= 2;
       if (verifyXiao()){
+        Serial.println("Get Xiao");
+        digitalWrite(13, LOW);
         parseinXiao();
       }
     }      
   }
   // Check controller's request
   while (Serial1.available()) {
-    //Serial.println("Get Nine");
     sleeping = 0;
     timerNine =0;
     if (collectorNine(Serial1.read())) {
@@ -656,7 +667,7 @@ void loop() {
     //sleeping = 1;
     timerNine = 0;
     timerXiao = 0;
-    Serial.println("Snooze");
+    Serial.println("Snooze (not real)");
     //delay(20);
     //Snooze.deepSleep(config);
     
