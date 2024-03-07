@@ -1,16 +1,11 @@
 #define IN_PACKET_SIZE 64
 #define OUT_PACKET_SIZE 64
 
-#define R_LOW 22   //x100 Ohm
-#define R_HIGH 470 //x100 Ohm
-#define BAT_S 14
-#define RINGBUFFSIZE 64
-
 elapsedMillis timerXiao;
 elapsedMillis timerNine;
 int stateXiao = 0;
 int sleeping = 0;
-int ring_i = 0;
+
 //##########################################
 byte buf_num_nine = 0;
 byte buf_num_r_nine = 1;
@@ -32,8 +27,6 @@ byte packet_nine[4][IN_PACKET_SIZE];
 byte packet_xiao[2][IN_PACKET_SIZE];
 unsigned int pcrc_nine = 0;
 unsigned int pcrc_xiao = 0;
-int voltage_b[RINGBUFFSIZE];
-
 char req_1[] = {0x5A, 0xA5, 0x01, 0x14, 0x12, 0x01, 0x10, 0x10, 0xB7, 0xFF};
 char req_2[] = {0x5A, 0xA5, 0x01, 0x14, 0x12, 0x01, 0x30, 0x0C, 0x9B, 0xFF};
 char req_3[] = {0x5A, 0xA5, 0x01, 0x14, 0x12, 0x55, 0x30, 0x0C, 0x47, 0xFF};
@@ -54,7 +47,7 @@ char mem_bms[2][256] = {
               0x01,0x00,0xbd,0x22,0x5c,0x00,0x04,0x00,0x1a,0x16,0x2d,0x2d,0x00,0x00,0x00,0x00, // 60 // 30 // lifedata
               0x00,0x00,0xbd,0x22,0xbd,0x22,0x62,0x00,0xc6,0x0f,0x00,0x00,0x00,0x00,0x00,0x00, // 70 // 38 // 3b- health
               0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f, // 80 // 40 // cells 1-8
-              0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0x00,0x00,0x00,0x00, // 90 // 48 // cells 9-16
+              0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f, // 90 // 48 // cells 9-16
               0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // A0 // 50 // 51 -config strps
               0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // B0 // 58
               0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // C0 // 60 
@@ -71,7 +64,7 @@ char mem_bms[2][256] = {
               0x01,0x00,0xbd,0x22,0x5c,0x00,0x04,0x00,0x1a,0x16,0x2d,0x2d,0x00,0x00,0x00,0x00, // 60 // 30 // lifedata
               0x00,0x00,0xbd,0x22,0xbd,0x22,0x62,0x00,0xc6,0x0f,0x00,0x00,0x00,0x00,0x00,0x00, // 70 // 38 // 3b- health
               0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f, // 80 // 40 // cells 1-8
-              0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0x00,0x00,0x00,0x00, // 90 // 48 // cells 9-16
+              0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f,0xc8,0x0f, // 90 // 48 // cells 9-16
               0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // A0 // 50 // 51 -config strps
               0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // B0 // 58
               0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, // C0 // 60 
@@ -87,7 +80,7 @@ void setup() {
   
   pinMode(13, OUTPUT);
   digitalWrite(13, HIGH);
-  setVoltage(5700, 0);
+  setVoltage(3010, 0);
   setCurrent(0, 0);
   setTemp1(20, 0);
   setTemp2(20, 0);
@@ -96,11 +89,11 @@ void setup() {
   setChrgFullCycles(56, 0);
   setChrgCount(134, 0);
   setRemCap(32500, 0);
-  setRemPerc(79, 0);
+  setRemPerc(21, 0);
   setHealth(97, 0);
   setMfgDate((20<<9)|(9<<5)|18,0);// 20 -year, 9 - month, 18 -day
   
-  setVoltage(5700, 1);
+  setVoltage(3010, 1);
   setCurrent(0, 1);
   setTemp1(20, 1);
   setTemp2(20, 1);
@@ -109,14 +102,12 @@ void setup() {
   setChrgFullCycles(56, 1);
   setChrgCount(134, 1);
   setRemCap(32500, 1);
-  setRemPerc(79, 1);
+  setRemPerc(21, 1);
   setHealth(97, 1);
   setMfgDate((20<<9)|(9<<5)|18,1);// 20 -year, 9 - month, 18 -day
   delay(100);
 
   digitalWrite(13, LOW);
-  
-  analogReadResolution(12);
 }
 
 
@@ -257,6 +248,7 @@ boolean parseinNine(){
       Serial.println(' ');
   }
   }
+  return true;
 }
 
 boolean parseinXiao(){
@@ -422,7 +414,7 @@ boolean parseinXiao(){
       Serial.print(cells_i);
       Serial.print(" : ");
       Serial.print(cells_xiao[cells_i]);
-      if ((mem_bms[0][0x36*2 + (cells_i/8)] >> (7 - cells_i%8)) & 0x01 == 1) Serial.print(" B");
+      if (((mem_bms[0][0x36*2 + (cells_i/8)] >> (7 - cells_i%8)) & 0x01) == 1) Serial.print(" B");
       Serial.println();
       
     }
@@ -527,6 +519,7 @@ boolean genpacket(byte buf, byte mlen, byte saddr, byte daddr, byte cmd, byte ma
   }
   Serial.println('-');
 */
+  return true;
 }
 
 
@@ -609,56 +602,6 @@ boolean collectorXiao(char c) {
   return false;
 }
 
-boolean getAnalogVoltage() {
-  int value = analogRead(A1);
-  int volt = 330 * value * (R_LOW+R_HIGH)/(R_LOW*4096);
-  int voltage = 0;
-  if (voltage_b[0] == 0) {
-	  for (int n = 0; n < RINGBUFFSIZE; n++) {
-	    voltage_b[n] = volt;
-	  }
-	  voltage = volt;
-	  ring_i += 1;
-  }
-  else {
-	  voltage_b[ring_i] = volt;
-	  ring_i += 1;
-	  ring_i %= RINGBUFFSIZE;
-	  for (int n = 0; n < RINGBUFFSIZE; n++) {
-	    voltage += voltage_b[n];
-	  }
-	  voltage /= RINGBUFFSIZE;
-  }
-  setVoltage(voltage, 0);
-  setVoltage(voltage-5, 1);
-  int avgCell = (voltage*10)/BAT_S;
-  for (int cells_i = 0; cells_i < BAT_S; cells_i++) {
-    setCellVoltage(avgCell,cells_i, 0);
-	  setCellVoltage(avgCell,cells_i, 1);
-  }
-  int perc = 0;
-  if (avgCell > 4150) {
-	  perc = 100;
-  } else if (avgCell < 3100) {
-	  perc = 0;
-  } else {
-	  perc = (avgCell-3100)*100/1050;
-  }
-  setRemPerc(perc, 0);
-  setRemPerc(perc, 1);
-  
-  setMinCellVoltage(volt*10/BAT_S, 0);
-  setMinCellVoltage(volt*10/BAT_S, 1);
-  Serial.print("Get analog: V=");
-  Serial.print(volt);
-  Serial.print("Vm=");
-  Serial.print(voltage);
-  Serial.print(" Vcell=");
-  Serial.print(voltage/BAT_S);
-  Serial.print(" Val=");
-  Serial.println(value);
-}
-
 char getdata1() {
   char c;
   if (iter_n < 10) {
@@ -691,9 +634,6 @@ void loop() {
     
     Serial.println("Sent xiaoreq");
     //Serial.println(stateXiao);  
-	
-	// uncomment if you don't have analog voltage detector
-	getAnalogVoltage(); 
     timerXiao = 0;
     stateXiao += 1;
     stateXiao %=1;
