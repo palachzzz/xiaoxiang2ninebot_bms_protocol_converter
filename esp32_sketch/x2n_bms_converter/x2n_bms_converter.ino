@@ -624,7 +624,7 @@ boolean collectorXiao(char c) {
 
 #ifdef ANALOG_MEASURE 
 boolean getAnalogVoltage() {
-  int value = analogRead(13);
+  int value = analogRead(35);
   int volt = 330 * value * (R_LOW+R_HIGH)/(R_LOW*4096);
   int voltage = 0;
   if (voltage_b[0] == 0) {
