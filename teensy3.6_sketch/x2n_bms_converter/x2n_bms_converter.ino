@@ -11,8 +11,13 @@
 #define RINGBUFFSIZE 64
 #endif
 
+
+#ifdef TEENSYDUINO
+#define LED_PIN = 13
 elapsedMillis timerXiao;
 elapsedMillis timerNine;
+#endif
+
 int stateXiao = 0;
 int sleeping = 0;
 #ifdef ANALOG_MEASURE 
@@ -91,10 +96,13 @@ char mem_bms[2][256] = {
 void setup() {
   Serial.begin(115200);
   Serial1.begin(115200);
+#ifdef TEENSYDUINO
+  Serial1.setTX(1, true); // switch TX to opendrain mode. Should be after begin, as begin overrides it
+#endif  
   Serial2.begin(9600);
   
-  pinMode(13, OUTPUT);
-  digitalWrite(13, HIGH);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
   setVoltage(5700, 0);
   setCurrent(0, 0);
   setTemp1(20, 0);
@@ -122,7 +130,7 @@ void setup() {
   setMfgDate((20<<9)|(9<<5)|18,1);// 20 -year, 9 - month, 18 -day
   delay(100);
 
-  digitalWrite(13, LOW);
+  digitalWrite(LED_PIN, LOW);
 #ifdef ANALOG_MEASURE   
   analogReadResolution(12);
 #endif
@@ -205,7 +213,7 @@ boolean parseinNine(){
   */
   if ((daddr == 0x11) || (daddr == 0x12)) {
     Serial.println("Get Nine");
-    digitalWrite(13, HIGH);
+    digitalWrite(LED_PIN, HIGH);
     if ((cmd == 0x55) || (cmd == 0x01)) {
       if (cmd == 0x01) {
        cmd = 0x04;
@@ -721,7 +729,7 @@ void loop() {
       buf_num_xiao %= 2;
       if (verifyXiao()){
         Serial.println("Get Xiao");
-        digitalWrite(13, LOW);
+        digitalWrite(LED_PIN, LOW);
         parseinXiao();
       }
     }      
