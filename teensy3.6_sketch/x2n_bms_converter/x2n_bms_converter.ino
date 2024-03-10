@@ -13,15 +13,15 @@
 
 
 #ifdef TEENSYDUINO
-#define LED_PIN = 13
-#define ANALOG_VOLT_PIN = A1
+#define LED_PIN 13
+#define ANALOG_VOLT_PIN A1
 elapsedMillis timerXiao;
 elapsedMillis timerNine;
 #endif
 
 #ifdef ESP32
-#define LED_PIN = 2
-#define ANALOG_VOLT_PIN = 35
+#define LED_PIN 2
+#define ANALOG_VOLT_PIN 35
 u_int64_t timerXiao;
 u_int64_t timerNine;
 #endif
@@ -776,7 +776,7 @@ void loop() {
   if (timerNine >= 500) {
     timerNine = 0;
 #endif
-#efdef ESP32
+#ifdef ESP32
   if (esp_timer_get_time() - timerNine >= 500000) {
     timerNine = esp_timer_get_time();
 #endif
