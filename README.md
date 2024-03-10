@@ -5,16 +5,21 @@ This project allows the use of a third-party [smartBMS](https://www.ebay.com/itm
 I tested such build during two weeks, now I fixed all issues and ready to share it.
 UPD: Working fine for several years.
 
-2024 UPDATE:
-It is recommended to use this modern [xiaoxiang BMS](https://aliexpress.ru/item/1005005648437341.html),  which should fit into battery box. Please see schemes directory to see HW changes required.
-Due to end of life for Teensy 3.6, the code was adopted to use Teensy 4.0
-Also to decrease cost of such project, code was adopted to run on ESP32 Dev board, it is tested and working. ESP32 board is 1.5x bigger then Teensy 3.6, and 3x bigger then Teensy 4.0, but taking into account the price of ESP32, I think it will be acceptable for more people.
+# 2024 UPDATE:
+It is recommended to use this modern [xiaoxiang BMS](https://aliexpress.ru/item/1005005648437341.html),  which should fit into battery box. Please see schemes directory to see HW changes required.<br />
+Due to end of life for Teensy 3.6, the code was adopted to use Teensy 4.0 <br />
+Also to decrease cost of such project, code was adopted to run on ESP32 Dev board, it is tested and working. ESP32 board is 1.5x bigger then Teensy 3.6, and 3x bigger then Teensy 4.0, but taking into account the price of ESP32, I think it will be acceptable for more people. <br />
 Also, added capability to use it without Xiaoxiang BMS (and stupid BMS will work), in that case see scheme Teensy3.6_without_xiaoxiang_bms.jpg (for Teensy 4.0 it will be pin 15, for ESP32 it will be pin 35) and you need to uncommend following line in code:
-//#define ANALOG_MEASURE
+```
+#define ANALOG_MEASURE 
+```
 It is recommended to use 1M + 47K, basically you can use any resistors, but don't use too low resistors, as it will drain battery when Wheel is off. Don't forget to change following lines to your nominals:
+```
 #define R_LOW 470   //x100 Ohm
 #define R_HIGH 1000 //x100 Ohm
+```
 
+# Hardware
 
 WARNING: Teensy LC does't work with this project (not enough RAM)
 
