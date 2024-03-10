@@ -149,11 +149,11 @@ void HardwareSerialIMXRT::begin(uint32_t baud, uint16_t format)
 		 	*(hardware->rx_pins[rx_pin_index_].select_input_register) =  hardware->rx_pins[rx_pin_index_].select_val;		
 		}	
 
-		*(portControlRegister(hardware->tx_pins[tx_pin_index_].pin)) =  IOMUXC_PAD_SRE | IOMUXC_PAD_DSE(3) | IOMUXC_PAD_SPEED(3);
+		*(portControlRegister(hardware->tx_pins[tx_pin_index_].pin)) =  IOMUXC_PAD_ODE | IOMUXC_PAD_DSE(3) | IOMUXC_PAD_SPEED(3);
 		*(portConfigRegister(hardware->tx_pins[tx_pin_index_].pin)) = hardware->tx_pins[tx_pin_index_].mux_val;
 	} else {
 		// Half duplex maybe different pin pad config like PU...		
-		*(portControlRegister(hardware->tx_pins[tx_pin_index_].pin)) =  IOMUXC_PAD_SRE | IOMUXC_PAD_DSE(3) | IOMUXC_PAD_SPEED(3) 
+		*(portControlRegister(hardware->tx_pins[tx_pin_index_].pin)) =  IOMUXC_PAD_ODE | IOMUXC_PAD_DSE(3) | IOMUXC_PAD_SPEED(3) 
 				| IOMUXC_PAD_PKE | IOMUXC_PAD_PUE | IOMUXC_PAD_PUS(3);
 		*(portConfigRegister(hardware->tx_pins[tx_pin_index_].pin)) = hardware->tx_pins[tx_pin_index_].mux_val;
 	}
@@ -611,7 +611,7 @@ size_t HardwareSerialIMXRT::write9bit(uint32_t c)
 	__disable_irq();
 	transmitting_ = 1;
 	tx_buffer_head_ = head;
-	port->CTRL |= LPUART_CTRL_TE;
+	port->CTRL |= LPUART_CTRL_TE; //added
 	port->CTRL |= LPUART_CTRL_TIE; // (may need to handle this issue)BITBAND_SET_BIT(LPUART0_CTRL, TIE_BIT);
 	__enable_irq();
 	//digitalWrite(3, LOW);
@@ -704,7 +704,7 @@ void HardwareSerialIMXRT::IRQHandler()
 		}
 
 		port->CTRL &= ~LPUART_CTRL_TCIE;
-		port->CTRL &= ~LPUART_CTRL_TE;
+		port->CTRL &= ~LPUART_CTRL_TE; //added
 	}
 	//digitalWrite(4, LOW);
 }
