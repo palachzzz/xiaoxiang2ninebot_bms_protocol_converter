@@ -5,14 +5,27 @@
 //#define ANALOG_MEASURE 
 
 #ifdef ANALOG_MEASURE 
-#define R_LOW 22   //x100 Ohm
-#define R_HIGH 470 //x100 Ohm
+#define R_LOW 470   //x100 Ohm
+#define R_HIGH 1000 //x100 Ohm
 #define BAT_S 14
 #define RINGBUFFSIZE 64
 #endif
 
+
+#ifdef TEENSYDUINO
+#define LED_PIN 13
+#define ANALOG_VOLT_PIN A1
+elapsedMillis timerXiao;
+elapsedMillis timerNine;
+#endif
+
+#ifdef ESP32
+#define LED_PIN 2
+#define ANALOG_VOLT_PIN 35
 u_int64_t timerXiao;
 u_int64_t timerNine;
+#endif
+
 int stateXiao = 0;
 int sleeping = 0;
 #ifdef ANALOG_MEASURE 
@@ -90,11 +103,20 @@ char mem_bms[2][256] = {
 };
 void setup() {
   Serial.begin(115200);
-  Serial1.begin(115200, SERIAL_8N1, 22, 23);
+#ifdef TEENSYDUINO
+  Serial1.begin(115200);
+  Serial1.setTX(1, true); // switch TX to opendrain mode. Should be after begin, as begin overrides it
+#endif  
+#ifdef ESP32
+  pinMode(23, OUTPUT_OPEN_DRAIN); // switch TX pin to opendrain mode. Should be before begin, as pinMode overrides UART port
+  Serial1.begin(115200, SERIAL_8N1, 22, 23); // set UART1 as RX=22 pin, TX=23 pin
+  timerNine = esp_timer_get_time(); // set initial state
+  timerXiao = esp_timer_get_time(); // set initial state
+#endif
   Serial2.begin(9600);
   
-  pinMode(2, OUTPUT);
-  digitalWrite(2, HIGH);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
   setVoltage(5700, 0);
   setCurrent(0, 0);
   setTemp1(20, 0);
@@ -121,10 +143,8 @@ void setup() {
   setHealth(97, 1);
   setMfgDate((20<<9)|(9<<5)|18,1);// 20 -year, 9 - month, 18 -day
   delay(100);
-  timerNine = esp_timer_get_time();
-  timerXiao = esp_timer_get_time();
 
-  digitalWrite(2, LOW);
+  digitalWrite(LED_PIN, LOW);
 #ifdef ANALOG_MEASURE   
   analogReadResolution(12);
 #endif
@@ -207,7 +227,7 @@ boolean parseinNine(){
   */
   if ((daddr == 0x11) || (daddr == 0x12)) {
     Serial.println("Get Nine");
-    digitalWrite(2, HIGH);
+    digitalWrite(LED_PIN, HIGH);
     if ((cmd == 0x55) || (cmd == 0x01)) {
       if (cmd == 0x01) {
        cmd = 0x04;
@@ -624,7 +644,7 @@ boolean collectorXiao(char c) {
 
 #ifdef ANALOG_MEASURE 
 boolean getAnalogVoltage() {
-  int value = analogRead(35);
+  int value = analogRead(ANALOG_VOLT_PIN);
   int volt = 330 * value * (R_LOW+R_HIGH)/(R_LOW*4096);
   int voltage = 0;
   if (voltage_b[0] == 0) {
@@ -701,8 +721,14 @@ void loop() {
 
   
   // Ask XiaoXiang SmartBMS every XXX ms
+#ifdef TEENSYDUINO
+  if ((timerXiao >= 125) && (sleeping == 0)) {
+	timerXiao = 0;
+#endif
+#ifdef ESP32
   if ((esp_timer_get_time() - timerXiao >= 125000) && (sleeping == 0)) {
-    
+	timerXiao = esp_timer_get_time();
+#endif    
     Serial2.write(req_xiao[stateXiao], 7);
     
     Serial.println("Sent xiaoreq");
@@ -711,7 +737,6 @@ void loop() {
 #ifdef ANALOG_MEASURE 
 	getAnalogVoltage(); 
 #endif
-    timerXiao = esp_timer_get_time();
     stateXiao += 1;
     stateXiao %=1;
   }
@@ -723,7 +748,7 @@ void loop() {
       buf_num_xiao %= 2;
       if (verifyXiao()){
         Serial.println("Get Xiao");
-        digitalWrite(2, LOW);
+        digitalWrite(LED_PIN, LOW);
         parseinXiao();
       }
     }      
@@ -731,7 +756,12 @@ void loop() {
   // Check controller's request
   while (Serial1.available()) {
     sleeping = 0;
+#ifdef TEENSYDUINO
+    timerNine = 0;
+#endif
+#ifdef ESP32
     timerNine = esp_timer_get_time();
+#endif
     if (collectorNine(Serial1.read())) {
       buf_num_r_nine = buf_num_nine;
       buf_num_nine += 1;
@@ -742,14 +772,16 @@ void loop() {
     }
   }  
   // Sleep if ninebot stoped communication for 0.5s
+#ifdef TEENSYDUINO
+  if (timerNine >= 500) {
+    timerNine = 0;
+#endif
+#ifdef ESP32
   if (esp_timer_get_time() - timerNine >= 500000) {
-    //sleeping = 1;
     timerNine = esp_timer_get_time();
-    //timerXiao = esp_timer_get_time();
-    //Serial.println("Snooze (not real)");
-    Serial.println(esp_timer_get_time());
+#endif
+    Serial.println("Snooze (not real)");
     //delay(20);
     //Snooze.deepSleep(config);
-    
   }
 }
